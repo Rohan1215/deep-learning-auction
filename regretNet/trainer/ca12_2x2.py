@@ -8,7 +8,7 @@ import time
 import logging
 import numpy as np
 import tensorflow as tf
-
+tf.compat.v1.disable_eager_execution()
 
 class Trainer(object):
 
@@ -28,7 +28,7 @@ class Trainer(object):
             
         # Set Seeds for reproducibility
         np.random.seed(self.config[self.mode].seed)
-        tf.set_random_seed(self.config[self.mode].seed)
+        tf.compat.v1.set_random_seed(self.config[self.mode].seed)
         
         # Init Logger
         self.init_logger()
@@ -44,7 +44,7 @@ class Trainer(object):
         
     def get_clip_op(self, adv_var):
         self.clip_op =  self.clip_op_lambda(adv_var)
-        #tf.assign(adv_var, tf.clip_by_value(adv_var, 0.0, 1.0))
+        #tf.compat.v1.assign(adv_var, tf.compat.v1.clip_by_value(adv_var, 0.0, 1.0))
         
 
     def init_logger(self):
@@ -74,7 +74,7 @@ class Trainer(object):
             Output params:
                 revenue: scalar
         """
-        return tf.reduce_mean(tf.reduce_sum(pay, axis=-1))
+        return tf.compat.v1.reduce_mean(tf.compat.v1.reduce_sum(pay, axis=-1))
 
     def compute_utility(self, x, alloc, pay):
         """ Given input valuation (x), payment (pay) and allocation (alloc), computes utility
@@ -85,17 +85,17 @@ class Trainer(object):
             Output params:
                 utility: [num_batches, num_agents]
         """
-        return tf.reduce_sum(tf.multiply(alloc, x), axis=-1) - pay
+        return tf.compat.v1.reduce_sum(tf.compat.v1.multiply(alloc, x), axis=-1) - pay
 
 
     def get_misreports(self, x, adv_var, adv_shape):
 
         num_misreports = adv_shape[1]
-        adv = tf.tile(tf.expand_dims(adv_var, 0), [self.config.num_agents, 1, 1, 1, 1])
-        x_mis = tf.tile(x, [self.config.num_agents * num_misreports, 1, 1])
-        x_r = tf.reshape(x_mis, adv_shape)
+        adv = tf.compat.v1.tile(tf.compat.v1.expand_dims(adv_var, 0), [self.config.num_agents, 1, 1, 1, 1])
+        x_mis = tf.compat.v1.tile(x, [self.config.num_agents * num_misreports, 1, 1])
+        x_r = tf.compat.v1.reshape(x_mis, adv_shape)
         y = x_r * (1 - self.adv_mask) + adv * self.adv_mask
-        misreports = tf.reshape(y, [-1, self.config.num_agents, self.config.num_items])
+        misreports = tf.compat.v1.reshape(y, [-1, self.config.num_agents, self.config.num_items])
         return x_mis, misreports
 
     def init_graph(self):
@@ -107,9 +107,9 @@ class Trainer(object):
         u_shape = [self.config.num_agents, self.config[self.mode].num_misreports, self.config[self.mode].batch_size, self.config.num_agents]
 
         # Placeholders
-        self.x = tf.placeholder(tf.float32, shape=x_shape, name='x')
-        self.c = tf.placeholder(tf.float32, shape=c_shape, name='c')
-        self.adv_init = tf.placeholder(tf.float32, shape=adv_var_shape, name='adv_init')
+        self.x = tf.compat.v1.placeholder(tf.compat.v1.float32, shape=x_shape, name='x')
+        self.c = tf.compat.v1.placeholder(tf.compat.v1.float32, shape=c_shape, name='c')
+        self.adv_init = tf.compat.v1.placeholder(tf.compat.v1.float32, shape=adv_var_shape, name='adv_init')
         
         self.adv_mask = np.zeros(adv_shape)
         self.adv_mask[np.arange(self.config.num_agents), :, :, np.arange(self.config.num_agents), :] = 1.0
@@ -117,8 +117,8 @@ class Trainer(object):
         self.u_mask = np.zeros(u_shape)
         self.u_mask[np.arange(self.config.num_agents), :, :, np.arange(self.config.num_agents)] = 1.0
         
-        with tf.variable_scope('adv_var'):
-            self.adv_var = tf.get_variable('adv_var', shape = adv_var_shape, dtype = tf.float32)
+        with tf.compat.v1.variable_scope('adv_var'):
+            self.adv_var = tf.compat.v1.get_variable('adv_var', shape = adv_var_shape, dtype = tf.compat.v1.float32)
             
             
         # Misreports
@@ -127,14 +127,14 @@ class Trainer(object):
         
 
         # Input shapes for NNs
-        x_bundle = tf.expand_dims(tf.reduce_sum(self.x, axis = -1) + self.c, -1)
-        x_in = tf.concat([self.x, x_bundle], axis = -1)
+        x_bundle = tf.compat.v1.expand_dims(tf.compat.v1.reduce_sum(self.x, axis = -1) + self.c, -1)
+        x_in = tf.compat.v1.concat([self.x, x_bundle], axis = -1)
         
-        x_mis_in = tf.tile(x_in, [self.config.num_agents * self.config[self.mode].num_misreports, 1, 1])
+        x_mis_in = tf.compat.v1.tile(x_in, [self.config.num_agents * self.config[self.mode].num_misreports, 1, 1])
         
-        c_mis = tf.tile(self.c, [self.config.num_agents * self.config[self.mode].num_misreports, 1])
-        mis_bundle = tf.expand_dims(tf.reduce_sum(misreports, axis = -1) + c_mis, -1)
-        mis_in = tf.concat([misreports, mis_bundle], axis = -1)
+        c_mis = tf.compat.v1.tile(self.c, [self.config.num_agents * self.config[self.mode].num_misreports, 1])
+        mis_bundle = tf.compat.v1.expand_dims(tf.compat.v1.reduce_sum(misreports, axis = -1) + c_mis, -1)
+        mis_in = tf.compat.v1.concat([misreports, mis_bundle], axis = -1)
         
         # Get mechanism for true valuation: Allocation and Payment
         self.alloc, self.pay = self.net.inference(x_in)
@@ -147,19 +147,19 @@ class Trainer(object):
         utility_mis = self.compute_utility(x_mis_in, a_mis, p_mis)
         
         # Regret Computation
-        u_mis = tf.reshape(utility_mis, u_shape) * self.u_mask
-        utility_true = tf.tile(utility, [self.config.num_agents * self.config[self.mode].num_misreports, 1])
-        excess_from_utility = tf.nn.relu(tf.reshape(utility_mis - utility_true, u_shape) * self.u_mask)
-        rgt = tf.reduce_mean(tf.reduce_max(excess_from_utility, axis=(1, 3)), axis=1)
+        u_mis = tf.compat.v1.reshape(utility_mis, u_shape) * self.u_mask
+        utility_true = tf.compat.v1.tile(utility, [self.config.num_agents * self.config[self.mode].num_misreports, 1])
+        excess_from_utility = tf.compat.v1.nn.relu(tf.compat.v1.reshape(utility_mis - utility_true, u_shape) * self.u_mask)
+        rgt = tf.compat.v1.reduce_mean(tf.compat.v1.reduce_max(excess_from_utility, axis=(1, 3)), axis=1)
     
         #Metrics
         revenue = self.compute_rev(self.pay)
-        rgt_mean = tf.reduce_mean(rgt)
-        irp_mean = tf.reduce_mean(tf.nn.relu(-utility))
+        rgt_mean = tf.compat.v1.reduce_mean(rgt)
+        irp_mean = tf.compat.v1.reduce_mean(tf.compat.v1.nn.relu(-utility))
 
         # Variable Lists
-        alloc_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='alloc')
-        pay_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='pay')
+        alloc_vars = tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.TRAINABLE_VARIABLES, scope='alloc')
+        pay_vars = tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.TRAINABLE_VARIABLES, scope='pay')
         var_list = alloc_vars + pay_vars
 
 
@@ -168,33 +168,33 @@ class Trainer(object):
 
             w_rgt_init_val = 0.0 if "w_rgt_init_val" not in self.config.train else self.config.train.w_rgt_init_val
 
-            with tf.variable_scope('lag_var'):
-                self.w_rgt = tf.Variable(np.ones(self.config.num_agents).astype(np.float32) * w_rgt_init_val, 'w_rgt')
+            with tf.compat.v1.variable_scope('lag_var'):
+                self.w_rgt = tf.compat.v1.Variable(np.ones(self.config.num_agents).astype(np.float32) * w_rgt_init_val, 'w_rgt')
 
-            update_rate = tf.Variable(self.config.train.update_rate, trainable = False)
+            update_rate = tf.compat.v1.Variable(self.config.train.update_rate, trainable = False)
             self.increment_update_rate = update_rate.assign(update_rate + self.config.train.up_op_add)
       
             # Loss Functions
-            rgt_penalty = update_rate * tf.reduce_sum(tf.square(rgt)) / 2.0        
-            lag_loss = tf.reduce_sum(self.w_rgt * rgt)
+            rgt_penalty = update_rate * tf.compat.v1.reduce_sum(tf.compat.v1.square(rgt)) / 2.0        
+            lag_loss = tf.compat.v1.reduce_sum(self.w_rgt * rgt)
         
 
             loss_1 = -revenue + rgt_penalty + lag_loss
-            loss_2 = -tf.reduce_sum(u_mis)
+            loss_2 = -tf.compat.v1.reduce_sum(u_mis)
             loss_3 = -lag_loss
 
-            reg_losses = tf.get_collection('reg_losses')
+            reg_losses = tf.compat.v1.get_collection('reg_losses')
             if len(reg_losses) > 0:
-                reg_loss_mean = tf.reduce_mean(reg_losses)
+                reg_loss_mean = tf.compat.v1.reduce_mean(reg_losses)
                 loss_1 = loss_1 + reg_loss_mean
 
              
-            learning_rate = tf.Variable(self.config.train.learning_rate, trainable = False)
+            learning_rate = tf.compat.v1.Variable(self.config.train.learning_rate, trainable = False)
         
             # Optimizer
-            opt_1 = tf.train.AdamOptimizer(learning_rate)
-            opt_2 = tf.train.AdamOptimizer(self.config.train.gd_lr)
-            opt_3 = tf.train.GradientDescentOptimizer(update_rate)
+            opt_1 = tf.compat.v1.train.AdamOptimizer(learning_rate)
+            opt_2 = tf.compat.v1.train.AdamOptimizer(self.config.train.gd_lr)
+            opt_3 = tf.compat.v1.train.GradientDescentOptimizer(update_rate)
 
 
             # Train ops
@@ -203,45 +203,45 @@ class Trainer(object):
             self.lagrange_update    = opt_3.minimize(loss_3, var_list = [self.w_rgt])
             
             # Val ops
-            val_mis_opt = tf.train.AdamOptimizer(self.config.val.gd_lr)
+            val_mis_opt = tf.compat.v1.train.AdamOptimizer(self.config.val.gd_lr)
             self.val_mis_step = val_mis_opt.minimize(loss_2, var_list = [self.adv_var])       
 
             # Reset ops
-            self.reset_train_mis_opt = tf.variables_initializer(opt_2.variables()) 
-            self.reset_val_mis_opt = tf.variables_initializer(val_mis_opt.variables())
+            self.reset_train_mis_opt = tf.compat.v1.variables_initializer(opt_2.variables()) 
+            self.reset_val_mis_opt = tf.compat.v1.variables_initializer(val_mis_opt.variables())
 
             # Metrics
-            self.metrics = [revenue, rgt_mean, rgt_penalty, lag_loss, loss_1, tf.reduce_mean(self.w_rgt), update_rate]
+            self.metrics = [revenue, rgt_mean, rgt_penalty, lag_loss, loss_1, tf.compat.v1.reduce_mean(self.w_rgt), update_rate]
             self.metric_names = ["Revenue", "Regret", "Reg_Loss", "Lag_Loss", "Net_Loss", "w_rgt_mean", "update_rate"]
             
             #Summary
-            tf.summary.scalar('revenue', revenue)
-            tf.summary.scalar('regret', rgt_mean)
-            tf.summary.scalar('reg_loss', rgt_penalty)
-            tf.summary.scalar('lag_loss', lag_loss)
-            tf.summary.scalar('net_loss', loss_1)
-            tf.summary.scalar('w_rgt_mean', tf.reduce_mean(self.w_rgt))
-            if len(reg_losses) > 0: tf.summary.scalar('reg_loss', reg_loss_mean)
+            tf.compat.v1.summary.scalar('revenue', revenue)
+            tf.compat.v1.summary.scalar('regret', rgt_mean)
+            tf.compat.v1.summary.scalar('reg_loss', rgt_penalty)
+            tf.compat.v1.summary.scalar('lag_loss', lag_loss)
+            tf.compat.v1.summary.scalar('net_loss', loss_1)
+            tf.compat.v1.summary.scalar('w_rgt_mean', tf.compat.v1.reduce_mean(self.w_rgt))
+            if len(reg_losses) > 0: tf.compat.v1.summary.scalar('reg_loss', reg_loss_mean)
 
-            self.merged = tf.summary.merge_all()
-            self.saver = tf.train.Saver(max_to_keep = self.config.train.max_to_keep)
+            self.merged = tf.compat.v1.summary.merge_all()
+            self.saver = tf.compat.v1.train.Saver(max_to_keep = self.config.train.max_to_keep)
         
         elif self.mode is "test":
 
-            loss = -tf.reduce_sum(u_mis)
-            test_mis_opt = tf.train.AdamOptimizer(self.config.test.gd_lr)
+            loss = -tf.compat.v1.reduce_sum(u_mis)
+            test_mis_opt = tf.compat.v1.train.AdamOptimizer(self.config.test.gd_lr)
             self.test_mis_step = test_mis_opt.minimize(loss, var_list = [self.adv_var])
-            self.reset_test_mis_opt = tf.variables_initializer(test_mis_opt.variables())
+            self.reset_test_mis_opt = tf.compat.v1.variables_initializer(test_mis_opt.variables())
 
             # Metrics
-            welfare = tf.reduce_mean(tf.reduce_sum(self.alloc * x_in, axis = (1,2)))
+            welfare = tf.compat.v1.reduce_mean(tf.compat.v1.reduce_sum(self.alloc * x_in, axis = (1,2)))
             self.metrics = [revenue, rgt_mean, irp_mean]
             self.metric_names = ["Revenue", "Regret", "IRP"]
-            self.saver = tf.train.Saver(var_list = var_list)
+            self.saver = tf.compat.v1.train.Saver(var_list = var_list)
             
 
         # Helper ops post GD steps
-        self.assign_op = tf.assign(self.adv_var, self.adv_init)
+        self.assign_op = tf.compat.v1.assign(self.adv_var, self.adv_init)
         self.get_clip_op(self.adv_var)
         
     def train(self, generator):
@@ -252,9 +252,9 @@ class Trainer(object):
         self.train_gen, self.val_gen = generator
         
         iter = self.config.train.restore_iter
-        sess = tf.InteractiveSession()
-        tf.global_variables_initializer().run()
-        train_writer = tf.summary.FileWriter(self.config.dir_name, sess.graph)
+        sess = tf.compat.v1.InteractiveSession()
+        tf.compat.v1.global_variables_initializer().run()
+        train_writer = tf.compat.v1.summary.FileWriter(self.config.dir_name, sess.graph)
         
         if iter > 0:
             model_path = os.path.join(self.config.dir_name, 'model-' + str(iter))
@@ -344,8 +344,8 @@ class Trainer(object):
         self.test_gen = generator
 
         iter = self.config.test.restore_iter
-        sess = tf.InteractiveSession()
-        tf.global_variables_initializer().run()
+        sess = tf.compat.v1.InteractiveSession()
+        tf.compat.v1.global_variables_initializer().run()
 
         model_path = os.path.join(self.config.dir_name,'model-' + str(iter))
         self.saver.restore(sess, model_path)

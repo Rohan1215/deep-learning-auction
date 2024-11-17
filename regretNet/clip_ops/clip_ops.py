@@ -5,35 +5,37 @@ from __future__ import print_function
 import numpy as np
 import tensorflow as tf
 
+tf.compat.v1.disable_eager_execution()
+
 
 def clip_op_01(x):
-    clip_op = tf.assign(x, tf.clip_by_value(x, 0.0, 1.0))
+    clip_op = tf.compat.v1.assign(x, tf.compat.v1.clip_by_value(x, 0.0, 1.0))
     return clip_op
     
 def clip_op_12(x):
-    clip_op = tf.assign(x, tf.clip_by_value(x, 1.0, 2.0))
+    clip_op = tf.compat.v1.assign(x, tf.compat.v1.clip_by_value(x, 1.0, 2.0))
     return clip_op
     
 def clip_op_23(x):
-    clip_op = tf.assign(x, tf.clip_by_value(x, 2.0, 3.0))
+    clip_op = tf.compat.v1.assign(x, tf.compat.v1.clip_by_value(x, 2.0, 3.0))
     return clip_op
 
 def clip_op_12_15(x):
-    clip_op_1 = tf.assign(x[:, :, 0, :], tf.clip_by_value(x[:, :, 0, :], 1.0, 2.0))
-    clip_op_2 = tf.assign(x[:, :, 1, :], tf.clip_by_value(x[:, :, 1, :], 1.0, 5.0))
-    clip_op = tf.group([clip_op_1, clip_op_2])
+    clip_op_1 = tf.compat.v1.assign(x[:, :, 0, :], tf.compat.v1.clip_by_value(x[:, :, 0, :], 1.0, 2.0))
+    clip_op_2 = tf.compat.v1.assign(x[:, :, 1, :], tf.compat.v1.clip_by_value(x[:, :, 1, :], 1.0, 5.0))
+    clip_op = tf.compat.v1.group([clip_op_1, clip_op_2])
     return clip_op
 
 def clip_op_416_47(x):
-    clip_op_1 = tf.assign(x[:, :, :, 0], tf.clip_by_value(x[:, :, :, 0], 4.0, 16.0))
-    clip_op_2 = tf.assign(x[:, :, :, 1], tf.clip_by_value(x[:, :, :, 1], 4.0, 7.0))
-    clip_op = tf.group([clip_op_1, clip_op_2])
+    clip_op_1 = tf.compat.v1.assign(x[:, :, :, 0], tf.compat.v1.clip_by_value(x[:, :, :, 0], 4.0, 16.0))
+    clip_op_2 = tf.compat.v1.assign(x[:, :, :, 1], tf.compat.v1.clip_by_value(x[:, :, :, 1], 4.0, 7.0))
+    clip_op = tf.compat.v1.group([clip_op_1, clip_op_2])
     return clip_op
 
 def clip_op_04_03(x):
-    clip_op_1 = tf.assign(x[:, :, :, 0], tf.clip_by_value(x[:, :, :, 0], 0.0, 4.0))
-    clip_op_2 = tf.assign(x[:, :, :, 1], tf.clip_by_value(x[:, :, :, 1], 0.0, 3.0))
-    clip_op = tf.group([clip_op_1, clip_op_2])
+    clip_op_1 = tf.compat.v1.assign(x[:, :, :, 0], tf.compat.v1.clip_by_value(x[:, :, :, 0], 0.0, 4.0))
+    clip_op_2 = tf.compat.v1.assign(x[:, :, :, 1], tf.compat.v1.clip_by_value(x[:, :, :, 1], 0.0, 3.0))
+    clip_op = tf.compat.v1.group([clip_op_1, clip_op_2])
     return clip_op
 
 def clip_op_triangle_01_numpy(x):
@@ -70,7 +72,7 @@ def clip_op_triangle_01_numpy(x):
 
 
 def clip_op_triangle_01(x):
-    y = tf.py_func(clip_op_triangle_01_numpy, [x], tf.float32)
-    clip_op = tf.assign(x, y)
+    y = tf.compat.v1.py_func(clip_op_triangle_01_numpy, [x], tf.compat.v1.float32)
+    clip_op = tf.compat.v1.assign(x, y)
     return clip_op
     

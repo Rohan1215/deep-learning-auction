@@ -7,13 +7,15 @@ from baseline.baseline import OptRevOneItem
 import tensorflow as tf
 import numpy as np
 
+tf.compat.v1.disable_eager_execution()
+
 class MyersonNet():
     '''
     MyersonNet: A Neural Network for computing optimal single item auctions
     '''
     def __init__(self, args, train_data, test_data):
         self.args = args
-        self.sess = tf.InteractiveSession()
+        self.sess = tf.compat.v1.InteractiveSession()
         self.train_data = train_data
         self.test_data = test_data
         self.nn_build()
@@ -23,8 +25,8 @@ class MyersonNet():
         num_max_units = self.args.num_max_units
         num_agent     = self.args.num_agent
         
-        self.x  = tf.placeholder(tf.float32, [None, num_agent])
-        self.lr = tf.placeholder(tf.float32)
+        self.x  = tf.compat.v1.placeholder(tf.compat.v1.float32, [None, num_agent])
+        self.lr = tf.compat.v1.placeholder(tf.compat.v1.float32)
         
         ######
         # Initialization of the weights
@@ -34,9 +36,9 @@ class MyersonNet():
         self.w_encode2_init = -np.random.rand(num_max_units, num_func, num_agent) * 5.0
                             
         # Linear weights
-        self.w_encode1 = tf.Variable(tf.constant(np.float32(self.w_encode1_init)))
+        self.w_encode1 = tf.compat.v1.Variable(tf.compat.v1.constant(np.float32(self.w_encode1_init)))
         # Biase weights
-        self.w_encode2 = tf.Variable(tf.constant(np.float32(self.w_encode2_init)))
+        self.w_encode2 = tf.compat.v1.Variable(tf.compat.v1.constant(np.float32(self.w_encode2_init)))
         
         self.revenue, self.alloc, self.vv = self.nn_eval('train')
         self.revenue_test, self.alloc_test, self.vv_test = self.nn_eval('test')
@@ -46,28 +48,28 @@ class MyersonNet():
         num_max_units = self.args.num_max_units
         num_agent     = self.args.num_agent
         
-        batch_size = tf.shape(self.x)[0]
+        batch_size = tf.compat.v1.shape(self.x)[0]
         
-        append_dummy_mat = tf.constant(
+        append_dummy_mat = tf.compat.v1.constant(
                             np.float32(np.append(np.identity(num_agent),
                             np.zeros([num_agent, 1]), 1)))
         ######                    
         # Compute the input of the SPA with reserve zero unit
         ######
-        w_encode1_copy = tf.reshape(tf.tile(
+        w_encode1_copy = tf.compat.v1.reshape(tf.compat.v1.tile(
                             self.w_encode1, [batch_size, 1, 1]),
                             [batch_size, num_max_units, num_func, num_agent])
-        w_encode2_copy = tf.reshape(tf.tile(
+        w_encode2_copy = tf.compat.v1.reshape(tf.compat.v1.tile(
                             self.w_encode2, [batch_size, 1, 1]),
                             [batch_size, num_max_units, num_func, num_agent])
         
-        x_copy = tf.reshape(tf.tile(self.x, [1, num_func*num_max_units]),
+        x_copy = tf.compat.v1.reshape(tf.compat.v1.tile(self.x, [1, num_func*num_max_units]),
                             [batch_size, num_max_units, num_func, num_agent])
                     
-        vv_max_units = tf.reduce_max(tf.multiply(
-                        x_copy, tf.exp(w_encode1_copy)) + w_encode2_copy, [2])
+        vv_max_units = tf.compat.v1.reduce_max(tf.compat.v1.multiply(
+                        x_copy, tf.compat.v1.exp(w_encode1_copy)) + w_encode2_copy, [2])
         # Compute virtual value
-        vv = tf.reduce_min(vv_max_units, [1])
+        vv = tf.compat.v1.reduce_min(vv_max_units, [1])
         
         #####
         # Run SPA unit with reserve price 0
@@ -75,32 +77,32 @@ class MyersonNet():
         
         # Compute allocation rate in SPA unit
         if str == 'train':
-            w_a = tf.constant(np.float32(np.identity(num_agent+1) * 1000))
-            a_dummy = tf.nn.softmax(tf.matmul(tf.matmul(vv, append_dummy_mat), w_a))
+            w_a = tf.compat.v1.constant(np.float32(np.identity(num_agent+1) * 1000))
+            a_dummy = tf.compat.v1.nn.softmax(tf.compat.v1.matmul(tf.compat.v1.matmul(vv, append_dummy_mat), w_a))
         if str == 'test':
-            win_agent = tf.argmax(tf.matmul(vv, append_dummy_mat), 1) # The index of agent who win the item
-            a_dummy = tf.one_hot(win_agent, num_agent+1)
+            win_agent = tf.compat.v1.argmax(tf.compat.v1.matmul(vv, append_dummy_mat), 1) # The index of agent who win the item
+            a_dummy = tf.compat.v1.one_hot(win_agent, num_agent+1)
         
-        a = tf.slice(a_dummy, [0, 0], [batch_size, num_agent])
+        a = tf.compat.v1.slice(a_dummy, [0, 0], [batch_size, num_agent])
         
         # Compute payment in SPA unit: weighted max of inputs
-        w_p = tf.constant(np.float32(np.ones((num_agent, num_agent)) - np.identity(num_agent)))
-        spa_tensor1 = tf.reshape(tf.tile(tf.reshape(vv, [-1]), [num_agent]),\
+        w_p = tf.compat.v1.constant(np.float32(np.ones((num_agent, num_agent)) - np.identity(num_agent)))
+        spa_tensor1 = tf.compat.v1.reshape(tf.compat.v1.tile(tf.compat.v1.reshape(vv, [-1]), [num_agent]),\
                         [num_agent, -1, num_agent])
-        spa_tensor2 = tf.matmul(spa_tensor1, tf.matrix_diag(w_p))
-        p_spa = tf.transpose(tf.reduce_max(spa_tensor2, reduction_indices=[2]))
+        spa_tensor2 = tf.compat.v1.matmul(spa_tensor1, tf.compat.v1.matrix_diag(w_p))
+        p_spa = tf.compat.v1.transpose(tf.compat.v1.reduce_max(spa_tensor2, reduction_indices=[2]))
         
         ## Decode the payment
-        p_spa_copy = tf.reshape(tf.tile(p_spa, [1, num_func * num_max_units]),\
+        p_spa_copy = tf.compat.v1.reshape(tf.compat.v1.tile(p_spa, [1, num_func * num_max_units]),\
                         [batch_size, num_max_units, num_func, num_agent])
-        p_max_units = tf.reduce_min(tf.multiply(p_spa_copy - w_encode2_copy,\
-                        tf.reciprocal(tf.exp(w_encode1_copy))),\
+        p_max_units = tf.compat.v1.reduce_min(tf.compat.v1.multiply(p_spa_copy - w_encode2_copy,\
+                        tf.compat.v1.reciprocal(tf.compat.v1.exp(w_encode1_copy))),\
                             reduction_indices=[2])
                             
-        p = tf.reduce_max(p_max_units, reduction_indices = [1])
+        p = tf.compat.v1.reduce_max(p_max_units, reduction_indices = [1])
         
         # Compute the revenue
-        revenue = tf.reduce_mean(tf.reduce_sum(tf.multiply(a, p),
+        revenue = tf.compat.v1.reduce_mean(tf.compat.v1.reduce_sum(tf.compat.v1.multiply(a, p),
                     reduction_indices=[1]))
                     
         return revenue, a, vv
@@ -119,10 +121,10 @@ class MyersonNet():
         loss = - self.revenue
 
         # Choose gradient descent optimizer update step
-        self.train_step = tf.train.AdamOptimizer(self.lr).minimize(loss)
+        self.train_step = tf.compat.v1.train.AdamOptimizer(self.lr).minimize(loss)
 
         # Initialize variables
-        tf.global_variables_initializer().run()
+        tf.compat.v1.global_variables_initializer().run()
 
         # Store weights when training
         num_recordings = int(np.round(self.args.num_iter/self.args.skip_iter)) + 1
@@ -161,7 +163,7 @@ class MyersonNet():
         
         win_index = OptRevOneItem(self.args, data).winner()
         
-        a_error = tf.reduce_sum(tf.abs(self.alloc_test - win_index))/data_size/2.0
+        a_error = tf.compat.v1.reduce_sum(tf.compat.v1.abs(self.alloc_test - win_index))/data_size/2.0
 
         num_recordings = w_encode1_array.shape[0]
         rev_array = np.zeros(num_recordings)

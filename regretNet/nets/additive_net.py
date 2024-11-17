@@ -10,8 +10,10 @@ from base.base_net import *
 class Net(BaseNet):
 
     def __init__(self, config):
+        tf.compat.v1.disable_eager_execution()
         super(Net, self).__init__(config)
         self.build_net()
+        
 
     def build_net(self):
         """
@@ -29,7 +31,7 @@ class Net(BaseNet):
         
                 
         w_init = self.init
-        b_init = tf.keras.initializers.Zeros()
+        b_init = tf.compat.v1.keras.initializers.Zeros()
 
         wd = None if "wd" not in self.config.train else self.config.train.wd
             
@@ -44,7 +46,7 @@ class Net(BaseNet):
         num_in = num_agents * num_items
    
 
-        with tf.variable_scope("alloc"):
+        with tf.compat.v1.variable_scope("alloc"):
            
             # Input Layer
             self.w_a.append(create_var("w_a_0", [num_in, num_a_hidden_units], initializer = w_init, wd = wd))
@@ -67,7 +69,7 @@ class Net(BaseNet):
             self.b_a.append(create_var(wname, [(num_agents + 1) * (num_items + 1)], initializer = b_init))
 
             
-        with tf.variable_scope("pay"):
+        with tf.compat.v1.variable_scope("pay"):
             # Input Layer
             self.w_p.append(create_var("w_p_0", [num_in, num_p_hidden_units], initializer = w_init, wd = wd))
 
@@ -94,39 +96,39 @@ class Net(BaseNet):
         Inference 
         """
  
-        x_in = tf.reshape(x, [-1, self.config.num_agents * self.config.num_items])
+        x_in = tf.compat.v1.reshape(x, [-1, self.config.num_agents * self.config.num_items])
 
       
         # Allocation Network
-        a = tf.matmul(x_in, self.w_a[0]) + self.b_a[0]
+        a = tf.compat.v1.matmul(x_in, self.w_a[0]) + self.b_a[0]
         a = self.activation(a, 'alloc_act_0')
         activation_summary(a)
         
         for i in range(1, self.config.net.num_a_layers - 1):
-            a = tf.matmul(a, self.w_a[i]) + self.b_a[i]
+            a = tf.compat.v1.matmul(a, self.w_a[i]) + self.b_a[i]
             a = self.activation(a, 'alloc_act_' + str(i))                    
             activation_summary(a)
 
-        a = tf.matmul(a, self.w_a[-1]) + self.b_a[-1]
-        a = tf.nn.softmax(tf.reshape(a, [-1, self.config.num_agents + 1, self.config.num_items + 1]), axis = 1)
-        a = tf.slice(a, [0,0,0], size=[-1, self.config.num_agents, self.config.num_items], name = 'alloc_out')
+        a = tf.compat.v1.matmul(a, self.w_a[-1]) + self.b_a[-1]
+        a = tf.compat.v1.nn.softmax(tf.compat.v1.reshape(a, [-1, self.config.num_agents + 1, self.config.num_items + 1]), axis = 1)
+        a = tf.compat.v1.slice(a, [0,0,0], size=[-1, self.config.num_agents, self.config.num_items], name = 'alloc_out')
         activation_summary(a)
 
         # Payment Network
-        p = tf.matmul(x_in, self.w_p[0]) + self.b_p[0]
+        p = tf.compat.v1.matmul(x_in, self.w_p[0]) + self.b_p[0]
         p = self.activation(p, 'pay_act_0')                  
         activation_summary(p)
 
         for i in range(1, self.config.net.num_p_layers - 1):
-            p = tf.matmul(p, self.w_p[i]) + self.b_p[i]
+            p = tf.compat.v1.matmul(p, self.w_p[i]) + self.b_p[i]
             p = self.activation(p, 'pay_act_' + str(i))                  
             activation_summary(p)
 
-        p = tf.matmul(p, self.w_p[-1]) + self.b_p[-1]
-        p = tf.sigmoid(p, 'pay_sigmoid')
+        p = tf.compat.v1.matmul(p, self.w_p[-1]) + self.b_p[-1]
+        p = tf.compat.v1.sigmoid(p, 'pay_sigmoid')
         activation_summary(p)
         
-        u = tf.reduce_sum(a * tf.reshape(x, [-1, self.config.num_agents, self.config.num_items]), axis = -1)
+        u = tf.compat.v1.reduce_sum(a * tf.compat.v1.reshape(x, [-1, self.config.num_agents, self.config.num_items]), axis = -1)
         p = p * u
         activation_summary(p)
         

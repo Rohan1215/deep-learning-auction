@@ -58,6 +58,7 @@ class Net:
     def __init__(self, config, mode):
         self.config = config
         self.mode = mode
+        tf.compat.v1.disable_eager_execution()
         self.w_init = tf.keras.initializers.RandomNormal()
         self.b_init = tf.keras.initializers.RandomUniform(*self.config.net.b_init)
         self.build_net()
@@ -72,7 +73,7 @@ class Net:
         wd = None if "wd" not in self.config.train else self.config.train.wd
         
         
-        with tf.variable_scope("utility"):
+        with tf.name_scope("utility"):
             self.alpha = create_var("alpha", [num_items, num_hidden_units], initializer = self.w_init, wd = wd)            
             self.bias = create_var("bias", [num_hidden_units], initializer = self.b_init)
 
